@@ -183,7 +183,7 @@ export class CollectionView extends CollectionViewBase {
         }
     }
 
-    modifyDataSourceSnapshot(type: ChangeType, identifiers: Array<string>, sectionIdentifier: string, animate = true, reload = false) {
+    modifyDataSourceSnapshot(type: ChangeType, identifiers: Array<string>, sectionIdentifier: string, animate = false, reload = false) {
         if (this.items) {
             if (!this._dataSourceSnapshot || reload) {
                 this._dataSourceSnapshot = NSDiffableDataSourceSnapshot.alloc<string, string>().init();
