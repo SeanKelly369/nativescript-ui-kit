@@ -402,6 +402,7 @@ export class CollectionView extends CollectionViewBase {
                 const lastVisibleItemPos = layoutManager['findLastCompletelyVisibleItemPosition']();
                 const loadMoreItemIndex = this.items.length - this.loadMoreThreshold;
                 if (lastVisibleItemPos === loadMoreItemIndex) {
+                    this.loadingMore = true;
                     this.notify({ eventName: CollectionViewBase.loadMoreItemsEvent });
                 }
             } else if (layoutManager['findLastCompletelyVisibleItemPositions'] && layoutManager['getSpanCount']) {
@@ -415,6 +416,7 @@ export class CollectionView extends CollectionViewBase {
                 }
                 const loadMoreItemIndex = this.items.length - this.loadMoreThreshold;
                 if (lastVisibleItemPos >= loadMoreItemIndex) {
+                    this.loadingMore = true;
                     this.notify({ eventName: CollectionViewBase.loadMoreItemsEvent });
                 }
             }
@@ -817,6 +819,7 @@ export class CollectionView extends CollectionViewBase {
             }
         }
         this._listViewAdapter.notifyDataSetChanged();
+        this.loadingMore = false;
     }
 
     eachChild(callback: (child: ViewBase) => boolean) {
@@ -919,7 +922,14 @@ export class CollectionView extends CollectionViewBase {
             this.nativeViewProtected.scrollToPosition(index);
         }
     }
-
+    public scrollToOffset(offSetValue: number) {
+        if (this.nativeViewProtected && this.orientation === 'horizontal' && this.isScrollEnabled) {
+            this.nativeViewProtected.scrollBy(offSetValue, 0);
+        }
+        if (this.nativeViewProtected && this.orientation === 'vertical' && this.isScrollEnabled) {
+            this.nativeViewProtected.scrollBy(0, offSetValue);
+        }
+    }
     private _setPadding(newPadding: { top?: number; right?: number; bottom?: number; left?: number }) {
         const nativeView = this.nativeViewProtected;
         const padding = {

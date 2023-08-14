@@ -10,6 +10,9 @@ export class HomeComponent {
 		name: 'nativescript-coachmarks'
 	},
 	{
+		name: 'nativescript-fluid-segmented-bar'
+	},
+	{
 		name: 'nativescript-fonticon'
 	},
 	{
@@ -23,6 +26,9 @@ export class HomeComponent {
 	},
 	{
 		name: 'ui-collectionview'
+	},
+	{
+		name: 'ui-collectionview-sean'
 	},
 	{
 		name: 'nativescript-variable-blur-view'

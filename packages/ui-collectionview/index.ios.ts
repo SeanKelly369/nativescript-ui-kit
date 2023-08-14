@@ -1,7 +1,6 @@
 import {
     ChangeType,
     ChangedData,
-    Color,
     ContentView,
     CoreTypes,
     EventData,
@@ -9,7 +8,6 @@ import {
     Observable,
     Property,
     ProxyViewContainer,
-    Template,
     TouchGestureEventData,
     Trace,
     Utils,
@@ -24,8 +22,6 @@ import {
 import { Pointer } from '@nativescript/core/ui/gestures';
 import { CLog, CLogTypes, CollectionViewBase, CollectionViewItemEventData, ViewTemplateType, isBounceEnabledProperty, isScrollEnabledProperty, itemTemplatesProperty, orientationProperty, reorderLongPressEnabledProperty, reorderingEnabledProperty, reverseLayoutProperty, scrollBarIndicatorVisibleProperty, getUUID } from './common';
 export * from './common';
-
-const infinity = Utils.layout.makeMeasureSpec(0, Utils.layout.UNSPECIFIED);
 
 export enum ContentInsetAdjustmentBehavior {
     Always = UIScrollViewContentInsetAdjustmentBehavior.Always,
@@ -104,13 +100,6 @@ export class CollectionView extends CollectionViewBase {
         this.lastContentOffset = view.contentOffset;
         return view;
     }
-
-    // onTemplateAdded(t) {
-    //     super.onTemplateAdded(t);
-    //     if (this.nativeViewProtected) {
-    //         // this.nativeViewProtected.registerClassForCellWithReuseIdentifier(CollectionViewCell.class(), t.key.toLowerCase());
-    //     }
-    // }
     
     public initNativeView() {
         super.initNativeView();
@@ -137,6 +126,7 @@ export class CollectionView extends CollectionViewBase {
         // Important: cell's must be registered before creating the datasource
         // eg: they can *not* be created within the initWithCollectionViewCellProvider
         const templateKeys = this._itemTemplatesInternal.keys();
+        
         for (const key of templateKeys) {
             // register cell for each template type
             this.cellRegistrations[key] = UICollectionViewCellRegistration.registrationWithCellClassConfigurationHandler(CollectionViewCell.class(), (view, indexPath, identifier) => {
@@ -183,7 +173,7 @@ export class CollectionView extends CollectionViewBase {
         }
     }
 
-    modifyDataSourceSnapshot(type: ChangeType, identifiers: Array<string>, sectionIdentifier: string, animate = true, reload = false) {
+    modifyDataSourceSnapshot(type: ChangeType, identifiers: Array<string>, sectionIdentifier: string, animate = false, reload = false) {
         if (this.items) {
             if (!this._dataSourceSnapshot || reload) {
                 this._dataSourceSnapshot = NSDiffableDataSourceSnapshot.alloc<string, string>().init();
@@ -221,7 +211,11 @@ export class CollectionView extends CollectionViewBase {
                     this._dataSourceSnapshot.deleteItemsWithIdentifiers(identifiers);
                     break;
             }
-            this._dataSource.applySnapshotAnimatingDifferences(this._dataSourceSnapshot, animate);
+            if (this.isAnimationEnabled) {
+                this._dataSource.applySnapshotAnimatingDifferences(this._dataSourceSnapshot, this.loadingMore ? false : animate);
+            } else {
+                this._dataSource.applySnapshotUsingReloadData(this._dataSourceSnapshot);
+            }
         }
     }
 
@@ -277,11 +271,6 @@ export class CollectionView extends CollectionViewBase {
         this.clearRealizedCells();
         super.disposeNativeView();
     }
-
-    // _onSizeChanged() {
-    //     super._onSizeChanged();
-    //     this.onSizeChanged(this.getMeasuredWidth(), this.getMeasuredHeight());
-    // }
 
     get _childrenCount(): number {
         return this._map.size;
@@ -428,7 +417,6 @@ export class CollectionView extends CollectionViewBase {
     }
     [isBounceEnabledProperty.setNative](value: boolean) {
         this.nativeViewProtected.bounces = value;
-        // this.nativeViewProtected.alwaysBounceHorizontal = value;
     }
 
     [itemTemplatesProperty.getDefault](): KeyedTemplate[] {
@@ -510,7 +498,6 @@ export class CollectionView extends CollectionViewBase {
                     this._delegate = UICollectionViewDelegateImpl.initWithOwner(this);
                 }
             }
-            // this._delegate._owner = new WeakRef(this);
             this.nativeViewProtected.delegate = this._delegate;
         }
         if (layoutView instanceof UICollectionViewFlowLayout) {
@@ -552,67 +539,68 @@ export class CollectionView extends CollectionViewBase {
         // console.log(' >')
         const sectionIdentifier = this._dataSource.sectionIdentifierForIndex(0);
         // console.log(' sectionIdentifier:', sectionIdentifier)
+        const contentOffset = view.contentOffset;
 
         switch (event.action) {
             case ChangeType.Delete: {
-                const identifiers = [];
+                const deleteIdentifiers = [];
                 for (let index = 0; index < event.addedCount; index++) {
                     const indexPath = NSIndexPath.indexPathForRowInSection(event.index + index, sectionIdentifier);
                     const identifier = this._dataSource.itemIdentifierForIndexPath(indexPath);
                     
                     // console.log(' delete identifier:', identifier)
-                    identifiers.push(identifier);
+                    deleteIdentifiers.push(identifier);
                 }
                 this.unbindUnusedCells(event.removed);
                 
-                this.modifyDataSourceSnapshot(ChangeType.Delete, identifiers, sectionIdentifier);
+                this.modifyDataSourceSnapshot(ChangeType.Delete, deleteIdentifiers, sectionIdentifier);
                 return;
             }
             case ChangeType.Update: {
-                const identifiers = [];
+                const updateIdentifiers = [];
                 const indexPath = NSIndexPath.indexPathForRowInSection(event.index, sectionIdentifier);
                 const identifier = this._dataSource.itemIdentifierForIndexPath(indexPath);
                 // console.log(' update identifier:', identifier)
-                identifiers.push(identifier);
+                updateIdentifiers.push(identifier);
 
-                this.modifyDataSourceSnapshot(ChangeType.Update, identifiers, sectionIdentifier);
+                this.modifyDataSourceSnapshot(ChangeType.Update, updateIdentifiers, sectionIdentifier);
                 return;
             }
             case ChangeType.Add: {
-                const identifiers = [];
+                const addIdentifiers = [];
                 for (let index = 0; index < event.addedCount; index++) {
                     const indexPath = NSIndexPath.indexPathForRowInSection(event.index + index, sectionIdentifier);
                     const identifier = this._dataSource.itemIdentifierForIndexPath(indexPath) || getUUID();
                     // console.log(' add identifier:', identifier)
-                    identifiers.push(identifier);
+                    addIdentifiers.push(identifier);
                 }
-                this.modifyDataSourceSnapshot(ChangeType.Add, identifiers, sectionIdentifier);
+                this.modifyDataSourceSnapshot(ChangeType.Add, addIdentifiers, sectionIdentifier);
                 return;
             }
             case ChangeType.Splice: {
                     const added = event.addedCount;
                     const removed = (event.removed && event.removed.length) || 0;
                     if (added > 0 && added === removed) {
-                        const identifiers = [];
+                        const spliceIdentifiers = [];
                         for (let index = 0; index < added; index++) {
                             const indexPath = NSIndexPath.indexPathForRowInSection(event.index + index, sectionIdentifier);
                             const identifier = this._dataSource.itemIdentifierForIndexPath(indexPath) || getUUID();
                             // console.log(' splice, update identifier:', identifier)
-                            identifiers.push(identifier);
+                            spliceIdentifiers.push(identifier);
                         }
-                        this.modifyDataSourceSnapshot(ChangeType.Update, identifiers, sectionIdentifier);
+                        this.modifyDataSourceSnapshot(ChangeType.Update, spliceIdentifiers, sectionIdentifier);
                     } else {
                         if (event.removed && event.removed.length > 0) {
-                            const identifiers = [];
+                            const removeIdentifiers = [];
                             for (let index = 0; index < event.removed.length; index++) {
                                 const indexPath = NSIndexPath.indexPathForItemInSection(event.index + index, sectionIdentifier);
                                 const identifier = this._dataSource.itemIdentifierForIndexPath(indexPath);
                                 // console.log(' splice, remove identifier:', identifier)
-                                identifiers.push(identifier);
+                                removeIdentifiers.push(identifier);
                             }
                             this.unbindUnusedCells(event.removed);
 
-                            this.modifyDataSourceSnapshot(ChangeType.Delete, identifiers, sectionIdentifier);
+                            this.modifyDataSourceSnapshot(ChangeType.Delete, removeIdentifiers, sectionIdentifier);
                         }
                         if (event.addedCount > 0) {
                             const identifiers = [];
@@ -626,17 +614,15 @@ export class CollectionView extends CollectionViewBase {
                         }
                     }
                     // view.collectionViewLayout.invalidateLayout();
-                return;
+                break;
             }
         }
-        this.refresh();
+        view.contentOffset = contentOffset;
+        this.loadingMore = false;
     }
 
     protected clearEmbeddedViews() {
         this.clearRealizedCells();
-        // if (this.itemViewDisposer !== undefined) {
-        //     this.itemViewDisposer();
-        // }
     }
 
     private unbindUnusedCells(removedDataItems) {
@@ -655,15 +641,26 @@ export class CollectionView extends CollectionViewBase {
         if (!view) {
             return;
         }
+        const sizes = this._delegate instanceof UICollectionViewDelegateImpl ? this._delegate.cachedSizes : null;
+        const visibleIndexPaths = NSMutableSet.setWithArray(view.indexPathsForVisibleItems);
 
-        const visibles = view.indexPathsForVisibleItems;
+        if (sizes) {
+            for (const indexPath of visibleIndexPaths) {
+                sizes.replaceObjectAtIndexWithObject(indexPath.row, NSValue.valueWithCGSize(CGSizeZero));
+            }
+        }
+        const indexPathsArray = [];
+        visibleIndexPaths.enumerateObjectsUsingBlock((indexPath) => {
+            indexPathsArray.push(indexPath);
+        });
 
         UIView.performWithoutAnimation(() => {
             view.performBatchUpdatesCompletion(() => {
-                view.reloadItemsAtIndexPaths(visibles);
+                view.reloadItemsAtIndexPaths(indexPathsArray);
             }, null);
         });
     }
+
     public isItemAtIndexVisible(itemIndex: number): boolean {
         const view = this.nativeViewProtected;
         if (!view) {
@@ -694,11 +691,6 @@ export class CollectionView extends CollectionViewBase {
         });
 
         this.refreshDataSourceSnapshot(this.getDefaultSectionIdentifier());
-        // TODO: this is ugly look here: https://github.com/nativescript-vue/nativescript-vue/issues/525
-        // this.clearRealizedCells();
-        // dispatch_async(main_queue, () => {
-            this.nativeViewProtected.reloadData();
-            // });
             
         this.notify({ eventName: CollectionViewBase.dataPopulatedEvent });
     }
@@ -844,22 +836,6 @@ export class CollectionView extends CollectionViewBase {
                 const innerView = NSCellView.new() as NSCellView;
                 innerView.autoresizingMask = UIViewAutoresizing.FlexibleWidth | UIViewAutoresizing.FlexibleHeight;
                 innerView.view = new WeakRef(view);
-                // if (notForCellSizeComp && this.autoReloadItemOnLayout) {
-                //     // for a cell to update correctly on cell layout change we need
-                //     // to do it ourself instead of "propagating it"
-                //     view['performLayout'] = () => {
-                //         if (!this._preparingCell) {
-                //             const index = cell.currentIndex;
-                //             const nativeView = this.nativeViewProtected;
-
-                //             nativeView.performBatchUpdatesCompletion(() => {
-                //                 this.measureCell(cell, view, index);
-                //                 this.notifyForItemAtIndex(CollectionViewBase.itemLoadingEvent, view, indexPath.row, view.bindingContext, cell);
-                //             }, null);
-                //             nativeView.collectionViewLayout.invalidateLayout();
-                //         }
-                //     };
-                // }
                 innerView.addSubview(view.nativeViewProtected);
                 cell.contentView.addSubview(innerView);
             }
@@ -876,70 +852,80 @@ export class CollectionView extends CollectionViewBase {
         }
         return cellSize;
     }
+
     public getCellSize(index: number) {
-        let result;
-        // CLog(CLogTypes.log, 'getCellSize', index, result, this._effectiveColWidth, this._effectiveRowHeight, this.getMeasuredWidth(), this.getMeasuredHeight());
-        if (!result) {
-            let width = this._effectiveColWidth;
-            let height = this._effectiveRowHeight;
-            if (this.spanSize) {
-                const dataItem = this.getItemAtIndex(index);
-                const spanSize = this.spanSize(dataItem, index);
-                const horizontal = this.isHorizontal();
-                if (horizontal) {
-                    height *= spanSize;
-                } else {
-                    width *= spanSize;
-                }
-            }
-            if (width && height) {
-                result = [width, height];
-            } else if (height && this.orientation === 'vertical') {
-                result = [this.getMeasuredWidth(), height];
-            } else if (width && this.orientation === 'horizontal') {
-                result = [width, this.getMeasuredHeight()];
+        let width = this._effectiveColWidth;
+        let height = this._effectiveRowHeight;
+
+        if (this.spanSize) {
+            const dataItem = this.getItemAtIndex(index);
+            const spanSize = this.spanSize(dataItem, index);
+            const horizontal = this.isHorizontal();
+
+            if (horizontal) {
+                height *= spanSize;
+            } else {
+                width *= spanSize;
             }
         }
 
-        // return undefined;
+        let result;
+
+        if (width && height) {
+            result = [width, height];
+        } else if (height && this.orientation === 'vertical') {
+            result = [this.getMeasuredWidth(), height];
+        } else if (width && this.orientation === 'horizontal') {
+            result = [width, this.getMeasuredHeight()];
+        }
+
         return result;
     }
+
     private measureCell(cell: CollectionViewCell | CollectionViewReusableView, cellView: View, position: number): [number, number] {
-        if (cellView) {
-            let width = this._effectiveColWidth;
-            let height = this._effectiveRowHeight;
-            const horizontal = this.isHorizontal();
-            if (this.spanSize) {
-                const dataItem = this.getItemAtIndex(position);
-                const spanSize = this.spanSize(dataItem, position);
-                if (horizontal) {
-                    height *= spanSize;
-                } else {
-                    width *= spanSize;
-                }
-            }
-
-            const widthMeasureSpec = width
-                ? Utils.layout.makeMeasureSpec(width, Utils.layout.EXACTLY)
-                : horizontal
-                ? infinity
-                : Utils.layout.makeMeasureSpec(this._innerWidth, Utils.layout.UNSPECIFIED);
-            const heightMeasureSpec = height
-                ? Utils.layout.makeMeasureSpec(height, Utils.layout.EXACTLY)
-                : horizontal
-                ? Utils.layout.makeMeasureSpec(this._innerHeight, Utils.layout.UNSPECIFIED)
-                : infinity;
-            if (Trace.isEnabled()) {
-                CLog(CLogTypes.log, 'measureCell', position, width, height, widthMeasureSpec, heightMeasureSpec);
-            }
-            const measuredSize = View.measureChild(this, cellView, widthMeasureSpec, heightMeasureSpec);
-            const result: [number, number] = [measuredSize.measuredWidth, measuredSize.measuredHeight];
-
-            // this.storeCellSize(index.row, result);
-            return result;
+        if (!cellView) {
+            return undefined;
         }
-        return undefined;
+
+        let width = this._effectiveColWidth;
+        let height = this._effectiveRowHeight;
+        const horizontal = this.isHorizontal();
+
+        if (this.spanSize) {
+            const dataItem = this.getItemAtIndex(position);
+            const spanSize = this.spanSize(dataItem, position);
+            if (horizontal) {
+                height *= spanSize;
+            } else {
+                width *= spanSize;
+            }
+        }
+
+        const widthMeasureSpec = width
+            ? Utils.layout.makeMeasureSpec(width, Utils.layout.EXACTLY)
+            : horizontal
+            ? Number.POSITIVE_INFINITY
+            : Utils.layout.makeMeasureSpec(this._innerWidth, Utils.layout.UNSPECIFIED);
+
+        const heightMeasureSpec = height
+            ? Utils.layout.makeMeasureSpec(height, Utils.layout.EXACTLY)
+            : horizontal
+            ? Utils.layout.makeMeasureSpec(this._innerHeight, Utils.layout.UNSPECIFIED)
+            : Number.POSITIVE_INFINITY;
+
+        if (Trace.isEnabled()) {
+            CLog(CLogTypes.log, 'measureCell', position, width, height, widthMeasureSpec, heightMeasureSpec);
+        }
+
+        try {
+            const measuredSize = View.measureChild(this, cellView, widthMeasureSpec, heightMeasureSpec);
+            return [measuredSize.measuredWidth, measuredSize.measuredHeight];
+        } catch (error) {
+            console.error('Error measuring cell:', error);
+            return undefined;
+        }
     }
+
     layoutCell(index: number, cell: CollectionViewCell | CollectionViewReusableView, cellView: View): any {
         // const cellSize = this.getCellSize(index);
         const size = cell.bounds.size;
@@ -1025,29 +1011,6 @@ export class CollectionView extends CollectionViewBase {
         }
         return cell;
     }
-    // collectionViewViewForSupplementaryElementOfKindAtIndexPath(view: UICollectionView, kind: string, indexPath: NSIndexPath): UICollectionReusableView {
-    //     // const templateType = kind === UICollectionElementKindSectionHeader ? this._headerTemplate.key : this._footerTemplate.key;
-    //     const templateType = kind;
-    //     console.log('templateType:', templateType)
-    //     // let cell = collectionView.dequeueConfiguredReusableSupplementaryViewWithRegistrationForIndexPath(kind, templateType, indexPath) as CollectionViewReusableView;
-    //     let cell = this._dataSource.supplementaryViewProvider(view, kind, indexPath);
-    //     console.log('cell:', cell)
-    //     // if (!cell) {
-    //     //     cell = CollectionViewReusableView.new() as CollectionViewReusableView;
-    //     // }
-    //     // const firstRender = !cell.view;
-    //     // if (Trace.isEnabled()) {
-    //     //     CLog(CLogTypes.log, 'collectionViewViewForSupplementaryElementOfKindAtIndexPath', indexPath.row, templateType, !!cell.view, cell);
-    //     // }
-    //     // this._prepareHeaderFooter(cell, indexPath, templateType);
-
-    //     // the cell layout will be called from NSCellView layoutSubviews
-    //     // const cellView: View = cell.view;
-    //     // if (!firstRender && cellView['isLayoutRequired']) {
-    //     //     this.layoutCell(indexPath.row, cell, cellView);
-    //     // }
-    //     return cell;
-    // }
     collectionViewWillDisplayCellForItemAtIndexPath(collectionView: UICollectionView, cell: UICollectionViewCell, indexPath: NSIndexPath) {
         if (this.reverseLayout) {
             cell.transform = CGAffineTransformMakeRotation(-Math.PI);
@@ -1055,19 +1018,13 @@ export class CollectionView extends CollectionViewBase {
         if (this.items) {
             const loadMoreItemIndex = this.items.length - this.loadMoreThreshold;
             if (indexPath.row === loadMoreItemIndex && this.hasListeners(CollectionViewBase.loadMoreItemsEvent)) {
+                this.loadingMore = true;
                 this.notify<EventData>({
                     eventName: CollectionViewBase.loadMoreItemsEvent,
                     object: this
                 });
             }
         }
-        // if (this.hasListeners(CollectionViewBase.displayItemEvent) ) {
-        //     this.notify<CollectionViewItemDisplayEventData>({
-        //         eventName: CollectionViewBase.displayItemEvent,
-        //         index:indexPath.row,
-        //         object: this,
-        //     });
-        // }
 
         if (cell.preservesSuperviewLayoutMargins) {
             cell.preservesSuperviewLayoutMargins = false;
@@ -1147,7 +1104,6 @@ export class CollectionView extends CollectionViewBase {
         }
         return CGSizeZero;
     }
-
     private computeScrollEventData(scrollView: UIScrollView, eventName: string, dx?: number, dy?: number) {
         const horizontal = this.isHorizontal();
         const safeAreaInsetsTop = this.iosIgnoreSafeArea ? 0 : scrollView.safeAreaInsets.top;
@@ -1161,6 +1117,22 @@ export class CollectionView extends CollectionViewBase {
             dx,
             dy: dy + safeAreaInsetsTop
         };
+    }
+    scrollToOffset(value: number, animated: boolean) {
+        if (this.nativeViewProtected && this.isScrollEnabled) {
+            const { width, height } = this.nativeViewProtected.bounds.size;
+            let rect;
+
+            if (this.orientation === 'vertical') {
+                rect = CGRectMake(0, value, width, height);
+            } else if (this.orientation === 'horizontal') {
+                rect = CGRectMake(value, 0, width, height);
+            }
+
+            if (rect) {
+                this.nativeViewProtected.scrollRectToVisibleAnimated(rect, animated);
+            }
+        }
     }
     lastContentOffset: CGPoint;
     needsScrollStartEvent = false;
@@ -1185,12 +1157,12 @@ export class CollectionView extends CollectionViewBase {
     }
     stopScrolling(scrollView: UIScrollView) {
         if (this.isScrolling) {
-            this.isScrolling = false;
-            this.notify(this.computeScrollEventData(scrollView, CollectionViewBase.scrollEndEvent));
+            this.isScrolling = false;      
         }
     }
     scrollViewDidEndDecelerating(scrollView: UIScrollView) {
         this.stopScrolling(scrollView);
+        this.notify(this.computeScrollEventData(scrollView, CollectionViewBase.scrollEndEvent));
     }
     scrollViewWillEndDraggingWithVelocityTargetContentOffset?(scrollView: UIScrollView, velocity: CGPoint, targetContentOffset: interop.Pointer | interop.Reference<CGPoint>): void {
         this.stopScrolling(scrollView);
@@ -1260,75 +1232,6 @@ class CollectionViewReusableView extends UICollectionReusableView {
     }
 }
 
-// @NativeClass
-// class CollectionViewDataSource extends UICollectionViewDiffableDataSource<any,any>  {
-// // class CollectionViewDataSource extends NSObject implements UICollectionViewDataSource {
-//     _owner: WeakRef<CollectionView>;
-//     public static ObjCProtocols = [UICollectionViewDataSource];
-
-//     static initWithOwner(owner: CollectionView) {
-//         const delegate = CollectionViewDataSource.new() as CollectionViewDataSource;
-//         delegate._owner = new WeakRef(owner);
-//         return delegate;
-//     }
-//     numberOfSectionsInCollectionView(collectionView: UICollectionView) {
-//         const owner = this._owner.deref();
-//         if (owner) {
-//             return owner.numberOfSectionsInCollectionView(collectionView);
-//         }
-//         return 0;
-//     }
-
-//     collectionViewNumberOfItemsInSection(collectionView: UICollectionView, section: number) {
-//         const owner = this._owner.deref();
-//         if (owner) {
-//             return owner.collectionViewNumberOfItemsInSection(collectionView, section);
-//         }
-//         return 0;
-//     }
-
-//     collectionViewCellForItemAtIndexPath(collectionView: UICollectionView, indexPath: NSIndexPath): UICollectionViewCell {
-//         const owner = this._owner.deref();
-//         if (owner) {
-//             return owner.collectionViewCellForItemAtIndexPath(collectionView, indexPath);
-//         }
-//         return null;
-//     }
-//     collectionViewMoveItemAtIndexPathToIndexPath(collectionView: UICollectionView, sourceIndexPath: NSIndexPath, destinationIndexPath: NSIndexPath) {
-//         const owner = this._owner.deref();
-//         if (owner) {
-//             owner.reorderStartingRow = sourceIndexPath.row;
-//             owner.reorderEndingRow = destinationIndexPath.row;
-//             owner._reorderItemInSource(sourceIndexPath.row, destinationIndexPath.row, false);
-//         }
-//     }
-//     collectionViewTargetIndexPathForMoveFromItemAtIndexPathToProposedIndexPath?(collectionView: UICollectionView, originalIndexPath: NSIndexPath, proposedIndexPath: NSIndexPath): NSIndexPath {
-//         const owner = this._owner.deref();
-//         if (owner) {
-//             owner.reorderEndingRow = proposedIndexPath.row;
-//         }
-//         return proposedIndexPath;
-//     }
-//     collectionViewCanMoveItemAtIndexPath(collectionView: UICollectionView, indexPath: NSIndexPath) {
-//         const owner = this._owner.deref();
-//         if (owner) {
-//             const result = owner.shouldMoveItemAtIndex(indexPath.row);
-//             if (result) {
-//                 owner.reorderStartingRow = indexPath.row;
-//             }
-//             return result;
-//         }
-//         return false;
-//     }
-//     // collectionViewViewForSupplementaryElementOfKindAtIndexPath(collectionView: UICollectionView, kind: string, indexPath: NSIndexPath): UICollectionReusableView {
-//     //     console.log('collectionViewViewForSupplementaryElementOfKindAtIndexPath')
-//     //     const owner = this._owner.deref();
-//     //     if (owner) {
-//     //         return owner.collectionViewViewForSupplementaryElementOfKindAtIndexPath(collectionView, kind, indexPath);
-//     //     }
-//     //     return null;
-//     // }
-// }
 @NativeClass
 class UICollectionViewDelegateImpl extends UICollectionViewCacheDelegateFlowLayout implements UICollectionViewDelegate {
     _owner: WeakRef<CollectionView>;

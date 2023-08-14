@@ -159,7 +159,9 @@ export abstract class CollectionViewBase extends View implements CollectionViewD
 
     public isBounceEnabled: boolean;
     public isScrollEnabled: boolean;
+    public isAnimationEnabled: boolean;
     public reverseLayout: boolean;
+    public loadingMore: boolean;
     public orientation: CoreTypes.OrientationType;
     public itemTemplate: string | Template;
     public itemTemplates: string | KeyedTemplate[];
@@ -234,6 +236,7 @@ export abstract class CollectionViewBase extends View implements CollectionViewD
     public abstract refreshVisibleItems();
     public abstract isItemAtIndexVisible(index: number);
     public abstract scrollToIndex(index: number, animated: boolean);
+    public abstract scrollToOffset(value: number, animated?: boolean);
 
     protected updateInnerSize() {
         const width = this.getMeasuredWidth();
@@ -825,6 +828,12 @@ export const isBounceEnabledProperty = new Property<CollectionViewBase, boolean>
     valueConverter: booleanConverter
 });
 isBounceEnabledProperty.register(CollectionViewBase);
+export const isAnimationEnabledProperty = new Property<CollectionViewBase, boolean>({
+    name: 'isAnimationEnabled',
+    defaultValue: false,
+    valueConverter: booleanConverter
+});
+isAnimationEnabledProperty.register(CollectionViewBase);
 export const reverseLayoutProperty = new Property<CollectionViewBase, boolean>({
     name: 'reverseLayout',
     defaultValue: false,
@@ -864,3 +873,4 @@ export const autoReloadItemOnLayoutProperty = new Property<CollectionViewBase, b
     valueConverter: booleanConverter
 });
 autoReloadItemOnLayoutProperty.register(CollectionViewBase);
+
