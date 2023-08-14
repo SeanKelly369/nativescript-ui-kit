@@ -1,7 +1,5 @@
 dependencies {
-	def androidXRecyclerViewVersion =  project.hasProperty("androidXRecyclerViewVersion") ? project.androidXRecyclerViewVersion : "1.1.0"
-    implementation "androidx.recyclerview:recyclerview:$androidXRecyclerViewVersion"
-    implementation ('com.h6ah4i.android.widget.advrecyclerview:advrecyclerview:1.0.0@aar'){
-        transitive=true
-    }
+    def androidxRecyclerViewVersion = "1.2.1"
+    implementation "androidx.recyclerview:recyclerview:$androidxRecyclerViewVersion"
+    implementation 'com.h6ah4i.android.widget.advrecyclerview:advrecyclerview:1.0.0'
 }
