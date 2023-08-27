@@ -867,7 +867,7 @@ export class CollectionView extends CollectionViewBase {
         return view;
     }
 
-    private _getInnerView(view: View, cell: CollectionViewCell) {
+    private _setupInnerView(view: View, cell: CollectionViewCell) {
         const innerView = NSCellView.new() as NSCellView;
         innerView.autoresizingMask = UIViewAutoresizing.FlexibleWidth | UIViewAutoresizing.FlexibleHeight;
         innerView.view = new WeakRef(view);
@@ -875,24 +875,23 @@ export class CollectionView extends CollectionViewBase {
         cell.contentView.addSubview(innerView);
         return innerView;
     }
-
-    public getCellSize(index: number) {
+    
+    private _getInnerView(view: View, cell: CollectionViewCell) {
+        return this._setupInnerView(view, cell);
+    }
+    
+    public getCellSize(index: number): [number, number] {
         let width = this._effectiveColWidth;
         let height = this._effectiveRowHeight;
 
         if (this.spanSize) {
             const dataItem = this.getItemAtIndex(index);
             const spanSize = this.spanSize(dataItem, index);
-            const horizontal = this.isHorizontal();
-
-            if (horizontal) {
-                height *= spanSize;
-            } else {
-                width *= spanSize;
-            }
+    
+            this.isHorizontal ? height *= spanSize : width *= spanSize;
         }
 
-        let result;
+        let result: [number, number];
 
         if (width && height) {
             result = [width, height];
@@ -901,7 +900,6 @@ export class CollectionView extends CollectionViewBase {
         } else if (width && this.orientation === 'horizontal') {
             result = [width, this.getMeasuredHeight()];
         }
-
         return result;
     }
 
@@ -1049,11 +1047,11 @@ export class CollectionView extends CollectionViewBase {
                 });
             }
         }
-
+        
         if (cell.preservesSuperviewLayoutMargins) {
             cell.preservesSuperviewLayoutMargins = false;
         }
-
+        
         if (cell.layoutMargins) {
             cell.layoutMargins = UIEdgeInsetsZero;
         }
