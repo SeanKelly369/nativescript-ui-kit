@@ -5,11 +5,14 @@
   <StackLayout (tap)="addPlayers()" class="button-container">
     <Button [text]="generatePlayers" class="button"></Button>
   </StackLayout>
-    <GridLayout columns="60 1 *" rows="54 *">
+    <GridLayout columns="60 1 *" rows="54 1 *">
       <StackLayout row="0" col="0" class="table-header" (tap)="sortTableById()">
         <Label [text]="id"></Label>
       </StackLayout>
-      <StackLayout row="0" col="1" width="1" class="horizontal-heading-divider"></StackLayout>
+      <StackLayout row="0" col="1" class="horizontal-heading-divider"></StackLayout>
+      <StackLayout row="2" col="1" class="horizontal-heading-divider"></StackLayout>
+
+      <StackLayout row="1" class="vertical-heading-divider"></StackLayout>
 
       <StackLayout row="0" col="2">
         <ScrollView #tableMainHeadings
@@ -17,37 +20,50 @@
           (scroll)="onScrollHorizontallyHeadings($event)"
           (loaded)="doLoadedRemoveBandingAnimation($event)"
         >
-            <GridLayout columns="180 1 200 1 180 1 160 1 110 1 90 1 80">
+            <GridLayout columns="210 1 240 1 80 1 180 1 120 1 120 1 90 1 80">
 
-              <StackLayout class="table-header" col="0">
+              <StackLayout col="0" class="table-header">
                 <Label text="Name"></Label>
               </StackLayout>
-              <StackLayout class="table-header" col="2">
-                <Label text="Position"></Label>
+              <StackLayout col="1" class="horizontal-heading-divider"></StackLayout>
+              <StackLayout col="2" class="table-header">
+                <Label [text]="position"></Label>
               </StackLayout>
-              <StackLayout class="table-header" col="4">
-                <Label text="Height"></Label>
+              <StackLayout col="3" class="horizontal-heading-divider"></StackLayout>
+              <StackLayout col="4" class="table-header">
+                <Label [text]="height"></Label>
               </StackLayout>
-              <StackLayout class="table-header" col="6">
-                <Label text="Nationality"></Label>
+              <StackLayout col="5" class="horizontal-heading-divider"></StackLayout>
+              <StackLayout col="6" class="table-header">
+                <Label [text]="nationality"></Label>
               </StackLayout>
-              <StackLayout class="table-header" col="8">
-                <Label text="Date of Birth"></Label>
+              <StackLayout col="7" class="horizontal-heading-divider"></StackLayout>
+              <StackLayout col="8" class="table-header">
+                <Label [text]="dateOfBirth"></Label>
               </StackLayout>
-              <StackLayout class="table-header" col="10">
-                <Label text="Goals"></Label>
+              <StackLayout col="9" class="horizontal-heading-divider"></StackLayout>
+              <StackLayout col="10" class="table-header">
+                <Label [text]="appearances"></Label>
               </StackLayout>
-              <StackLayout class="table-header" col="12">
-                <Label text="Assists"></Label>
+              <StackLayout col="11" class="horizontal-heading-divider"></StackLayout>
+              <StackLayout col="12" class="table-header">
+                <Label [text]="goals"></Label>
+              </StackLayout>
+              <StackLayout col="13" class="horizontal-heading-divider"></StackLayout>
+              <StackLayout col="14" class="table-header">
+                <Label [text]="assists"></Label>
               </StackLayout>
             </GridLayout>
         </ScrollView>
       </StackLayout>
 
+      <StackLayout row="1" height="1" class="vertical-heading-divider"></StackLayout>
+
       <!-- Ids -->
-      <CollectionView #ids row="1" col="0" [items]="itemsOnScreen"
+      <CollectionView #ids row="2" col="0" [items]="itemsOnScreen"
         (scroll)="onScrollVertically($event)"
         (loaded)="doLoadedRemoveBandingAnimation($event)"
+        isAnimationEnabled="false"
       >
         <ng-template cvListItemTemplate let-item let-odd="odd">
           <StackLayout class="cell-height">
@@ -61,21 +77,24 @@
 
       <StackLayout row="1" col="1" width="1" class="horizontal-heading-divider"></StackLayout>
 
+      <StackLayout row="1" col="2" class="vertical-heading-divider"></StackLayout>
+
 
       <!-- Main table body -->
-      <ScrollView row="1" col="2" #tableMainBody 
+      <ScrollView row="2" col="2" #tableMainBody 
         orientation="horizontal" 
         (scroll)="onScrollHorizontallyMain($event)"
         (loaded)="doLoadedRemoveBandingAnimation($event)"
       >
 
-        <CollectionView #main backgroundColor="white" [items]="itemsOnScreen" width="1006"
+        <CollectionView #main backgroundColor="white" [items]="itemsOnScreen" width="1127"
           (scroll)="onScrollVertically($event)"
           (loaded)="doLoadedRemoveBandingAnimation($event)"
           (loadMoreItems)="loadMoreRows()"
+          isAnimationEnabled="false"
         >
           <ng-template cvListItemTemplate let-item let-odd="odd" let-i="index">
-            <GridLayout columns="180 1 200 1 180 1 160 1 110 1 90 1 80">
+            <GridLayout columns="210 1 240 1 80 1 180 1 120 1 120 1 90 1 80">
 
               <StackLayout col="0" [nsRouterLink]="['/item', item.id]" class="cell" [class.light-grey-cell]="odd" [class.white-cell]="!odd">
                 <Label [text]="item.name"></Label>
@@ -108,12 +127,18 @@
               <StackLayout col="9" class="horizontal-heading-divider"></StackLayout>
 
               <StackLayout col="10" class="cell" [class.light-grey-cell]="odd" [class.white-cell]="!odd">
-                <Label [text]="item.goals"></Label>
+                <Label [text]="item.appearances"></Label>
               </StackLayout>
 
               <StackLayout col="11" class="horizontal-heading-divider"></StackLayout>
 
               <StackLayout col="12" class="cell" [class.light-grey-cell]="odd" [class.white-cell]="!odd">
+                <Label [text]="item.goals"></Label>
+              </StackLayout>
+
+              <StackLayout col="13" class="horizontal-heading-divider"></StackLayout>
+
+              <StackLayout col="14" class="cell" [class.light-grey-cell]="odd" [class.white-cell]="!odd">
                 <Label [text]="item.assists"></Label>
               </StackLayout>
 

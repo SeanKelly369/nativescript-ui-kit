@@ -1,12 +1,12 @@
 import { ChangeDetectionStrategy, Component, ElementRef, OnInit, ViewChild } from '@angular/core';
-import * as stringConstants from './item/items.component.strings';
 import { ItemService } from './item/item.service';
 import { ItemVM } from './item/item';
-import { throttle } from '@nativescript/core/utils';
 import { isAndroid } from "@nativescript/core/platform";
+// eslint-disable-next-line @nrwl/nx/enforce-module-boundaries
 import { CollectionView } from '@nstudio/ui-collectionview';
 import { TableSortType } from './enums/table-sort-type';
 import { EventData, ObservableArray, ScrollEventData, ScrollView } from '@nativescript/core';
+import * as stringConstants from "./ui-collectionview-sean.component.strings";
 
 @Component({
 	selector: 'ui-collectionview-sean',
@@ -16,6 +16,19 @@ import { EventData, ObservableArray, ScrollEventData, ScrollView } from '@native
 })
 export class UiCollectionviewSeanComponent implements OnInit {
 
+  readonly id: string = stringConstants.id;
+  readonly name: string = stringConstants.name;
+  readonly position: string = stringConstants.position;
+  readonly height: string = stringConstants.height;
+  readonly dateOfBirth: string = stringConstants.dateOfBirth;
+  readonly nationality: string = stringConstants.nationality;
+  readonly appearances: string = stringConstants.appearances;
+  readonly goals: string = stringConstants.goals;
+  readonly assists: string = stringConstants.assists;
+
+  readonly generatePlayers: string = stringConstants.generatePlayers;
+
+  // eslint-disable-next-line @typescript-eslint/no-inferrable-types
   isAndroid: boolean = false;
 
   idsCollectionView: CollectionView;
@@ -53,18 +66,11 @@ export class UiCollectionviewSeanComponent implements OnInit {
   }
 
   itemsOnScreen: ObservableArray<ItemVM> = new ObservableArray();
-  rowsDisplayed: number = 20;
-  scrollOffsetX: number = 0;
 
-  readonly id: string = stringConstants.id;
-  readonly name: string = stringConstants.name;
-  readonly position: string = stringConstants.position;
-  readonly height: string = stringConstants.height;
-  readonly nationality: string = stringConstants.nationality;
-  readonly appearances: string = stringConstants.appearances;
-  readonly goals: string = stringConstants.goals;
-  readonly assists: string = stringConstants.assists;
-  readonly generatePlayers: string = stringConstants.generatePlayers;
+  // eslint-disable-next-line @typescript-eslint/no-inferrable-types
+  scrollOffsetX: number = 0;
+  // eslint-disable-next-line @typescript-eslint/no-inferrable-types
+  rowsDisplayed: number = 26;
 
   columnSorting: Map<string, number> = new Map<string, number>([
     ['ID', TableSortType.Ascending],
@@ -122,6 +128,7 @@ export class UiCollectionviewSeanComponent implements OnInit {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-inferrable-types
   addPlayers(amount: number = 10) {
     for(let i = 0; i < amount; i++) {
       const newPlayer = this.itemService.generateRandomPlayer();
@@ -140,8 +147,8 @@ export class UiCollectionviewSeanComponent implements OnInit {
       this.idsCollectionView.scrollToOffset(dyOffset, false);
       this.mainCollectionView.scrollToOffset(dyOffset, false);
     } else {
-      throttle(() => this.idsCollectionView.scrollToOffset(scrollOffsetY, false), 16)();
-      throttle(() => this.mainCollectionView.scrollToOffset(scrollOffsetY, false), 16)();
+      this.idsCollectionView.scrollToOffset(scrollOffsetY, false);
+      this.mainCollectionView.scrollToOffset(scrollOffsetY, false);
     }
   };
 
