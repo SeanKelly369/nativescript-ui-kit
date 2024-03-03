@@ -2,7 +2,6 @@ import {
     Builder,
     CSSType,
     ChangedData,
-    ContentView,
     CoreTypes,
     EventData,
     KeyedTemplate,
@@ -824,13 +823,13 @@ export const isScrollEnabledProperty = new Property<CollectionViewBase, boolean>
 isScrollEnabledProperty.register(CollectionViewBase);
 export const isBounceEnabledProperty = new Property<CollectionViewBase, boolean>({
     name: 'isBounceEnabled',
-    defaultValue: true,
+    defaultValue: false,
     valueConverter: booleanConverter
 });
 isBounceEnabledProperty.register(CollectionViewBase);
 export const isAnimationEnabledProperty = new Property<CollectionViewBase, boolean>({
     name: 'isAnimationEnabled',
-    defaultValue: true,
+    defaultValue: false,
     valueConverter: booleanConverter
 });
 isAnimationEnabledProperty.register(CollectionViewBase);

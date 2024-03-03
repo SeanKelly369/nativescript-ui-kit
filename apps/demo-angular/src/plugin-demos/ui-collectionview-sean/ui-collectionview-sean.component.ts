@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, NgZone, OnInit, ViewChild } from '@angular/core';
 import { ItemService } from './item/item.service';
 import { ItemVM } from './item/item';
 import { isAndroid } from "@nativescript/core/platform";
@@ -59,7 +59,11 @@ export class UiCollectionviewSeanComponent implements OnInit {
   };
 
 
-  constructor(private itemService: ItemService) {
+  constructor(
+    public itemService: ItemService,
+    private ngZone: NgZone,
+    private changeDetectionRef: ChangeDetectorRef
+  ) {
     if(isAndroid) {
       this.isAndroid = true;
     }
@@ -70,7 +74,7 @@ export class UiCollectionviewSeanComponent implements OnInit {
   // eslint-disable-next-line @typescript-eslint/no-inferrable-types
   scrollOffsetX: number = 0;
   // eslint-disable-next-line @typescript-eslint/no-inferrable-types
-  rowsDisplayed: number = 26;
+  rowsDisplayed: number = 20;
 
   columnSorting: Map<string, number> = new Map<string, number>([
     ['ID', TableSortType.Ascending],
@@ -84,13 +88,20 @@ export class UiCollectionviewSeanComponent implements OnInit {
   ]);
 
   ngOnInit() {
-    this.itemsOnScreen.splice(0, this.itemService.items.length, ...(this.itemService.items.slice(0, this.rowsDisplayed)));
+    this.itemsOnScreen.splice(0, this.itemsOnScreen.length, ...this.itemService.items.slice(0, this.rowsDisplayed));
+    this.changeDetectionRef.detectChanges();
+    this.rowsDisplayed = 277;
+    this.ngZone.runOutsideAngular(() => {
+      this.itemsOnScreen.splice(0, this.itemService.items.length, ...(this.itemService.items.slice(0, this.rowsDisplayed)));
+      this.ngZone.run(() => {
+        this.changeDetectionRef.markForCheck();
+      });
+    });
   }
 
   setVerticalOffsetsToZero(): void {
     this.idsCollectionView.scrollToOffset(0, false);
     this.mainCollectionView.scrollToOffset(0, false);
-    this.rowsDisplayed = 20;
   }
 
   sortTableById(): void {
@@ -115,8 +126,7 @@ export class UiCollectionviewSeanComponent implements OnInit {
     this.columnSorting.set('Goals', TableSortType.Default);
     this.columnSorting.set('Assists', TableSortType.Default);
 
-    this.setVerticalOffsetsToZero();
-    this.itemsOnScreen.splice(0, this.itemService.items.length, ...(this.itemService.items.slice(0, this.rowsDisplayed)
+    this.itemsOnScreen.splice(0, this.itemService.items.length, ...(this.itemService.items.slice(0, this.itemService.items.length-1)
         .map(animal => (animal && animal.id !== undefined ? animal : { ...animal, SelectionType: undefined }))));
   }
 
@@ -134,7 +144,24 @@ export class UiCollectionviewSeanComponent implements OnInit {
       const newPlayer = this.itemService.generateRandomPlayer();
       this.itemService.items.push(newPlayer);
     }
-    this.itemsOnScreen = new ObservableArray(this.itemService.items);
+
+    // TODO: I'm unsure why, but the sorting is needed to update the view
+    switch (this.columnSorting.get('ID')) {
+      case TableSortType.Default:
+        this.itemService.items.sort((a, b) => b.id - a.id);
+        break;
+      case TableSortType.Descending:
+        this.itemService.items.sort((a, b) => b.id - a.id);
+        break;
+      case TableSortType.Ascending:
+        this.itemService.items.sort((a, b) => a.id - b.id);
+        break;
+    }
+
+    this.itemsOnScreen.splice(0, this.itemService.items.length, ...(this.itemService.items.slice(0, this.itemService.items.length)
+      .map(animal => (animal && animal.id !== undefined ? animal : { ...animal, SelectionType: undefined }))));
+
+    this.changeDetectionRef.detectChanges();
   }
 
   onScrollVertically(args): void {

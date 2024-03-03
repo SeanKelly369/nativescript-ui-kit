@@ -160,11 +160,11 @@ export class CollectionView extends CollectionViewBase {
 
   refreshDataSourceSnapshot(sectionIdentifier: string) {
     if (this.items) {
-      this.modifyDataSourceSnapshot(ChangeType.Add, [], sectionIdentifier, false, true);
+      this.modifyDataSourceSnapshot(ChangeType.Add, [], sectionIdentifier, true, false);
     }
   }
 
-  modifyDataSourceSnapshot(type: ChangeType, identifiers: Array<string>, sectionIdentifier: string, animate = true, reload = false) {
+  modifyDataSourceSnapshot(type: ChangeType, identifiers: Array<string>, sectionIdentifier: string, reload = false, animate = true) {
     if (this.items) {
       if (!this._dataSourceSnapshot || reload) {
         this._dataSourceSnapshot = NSDiffableDataSourceSnapshot.alloc<string, string>().init();
@@ -521,6 +521,7 @@ export class CollectionView extends CollectionViewBase {
   }
 
   public onSourceCollectionChanged(event: ChangedData<any>) {
+    const reload = event.addedCount !== event.removed.length;
     const view = this.nativeViewProtected;
     if (!view || this._dataUpdatesSuspended || !this._lastLayoutKey) {
       return;
@@ -561,7 +562,7 @@ export class CollectionView extends CollectionViewBase {
         // console.log(' update identifier:', identifier)
         updateIdentifiers.push(identifier);
 
-        this.modifyDataSourceSnapshot(ChangeType.Update, updateIdentifiers, sectionIdentifier);
+        this.modifyDataSourceSnapshot(ChangeType.Update, updateIdentifiers, sectionIdentifier, reload);
         return;
       }
       case ChangeType.Add: {
@@ -598,7 +599,7 @@ export class CollectionView extends CollectionViewBase {
             }
             this.unbindUnusedCells(event.removed);
 
-            this.modifyDataSourceSnapshot(ChangeType.Delete, removeIdentifiers, sectionIdentifier);
+            this.modifyDataSourceSnapshot(ChangeType.Delete, removeIdentifiers, sectionIdentifier, reload);
           }
           if (event.addedCount > 0) {
             const identifiers = [];

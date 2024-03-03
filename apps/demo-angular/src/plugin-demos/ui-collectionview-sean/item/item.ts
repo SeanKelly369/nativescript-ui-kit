@@ -5,6 +5,7 @@ export class ItemVM {
     id: number
     name: string
     position: string
+    positionColour: string
     height: number
     nationality: string
     dob: string

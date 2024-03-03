@@ -2,13 +2,16 @@
 
 <StackLayout>
 
-  <StackLayout (tap)="addPlayers()" class="button-container">
-    <Button [text]="generatePlayers" class="button"></Button>
-  </StackLayout>
+  <GridLayout class="button-container" columns="auto auto">
+    <Button [text]="generatePlayers" class="button" (tap)="addPlayers()"></Button>
+    <Label col="1" [text]="this.itemService.items.length + 2" marginLeft="5"></Label>
+  </GridLayout>
     <GridLayout columns="60 1 *" rows="54 1 *">
-      <StackLayout row="0" col="0" class="table-header" (tap)="sortTableById()">
-        <Label [text]="id"></Label>
-      </StackLayout>
+      <GridLayout row="0" col="0" columns="* 20" class="table-header" (tap)="sortTableById()" backgroundColor="red">
+        <Label col="0" [text]="id"></Label>
+        <!-- Why does this image not appear? Does it need to be in a specific assets folder? -->
+        <Image col="1" src="~/images/sort_default.png" width="100%" height="40"></Image>
+      </GridLayout>
       <StackLayout row="0" col="1" class="horizontal-heading-divider"></StackLayout>
       <StackLayout row="2" col="1" class="horizontal-heading-divider"></StackLayout>
 
@@ -90,7 +93,6 @@
         <CollectionView #main backgroundColor="white" [items]="itemsOnScreen" width="1127"
           (scroll)="onScrollVertically($event)"
           (loaded)="doLoadedRemoveBandingAnimation($event)"
-          (loadMoreItems)="loadMoreRows()"
           isAnimationEnabled="false"
         >
           <ng-template cvListItemTemplate let-item let-odd="odd" let-i="index">
@@ -103,7 +105,9 @@
               <StackLayout col="1" class="horizontal-heading-divider"></StackLayout>
 
               <StackLayout col="2" class="cell" [class.light-grey-cell]="odd" [class.white-cell]="!odd">
-                <Label [text]="item.position"></Label>
+                <StackLayout [backgroundColor]="item.positionColour" width="auto" padding="2" borderRadius="3" horizontalAlignment="center">
+                  <Label [text]="item.position"></Label>
+                </StackLayout>
               </StackLayout>
 
               <StackLayout col="3" class="horizontal-heading-divider"></StackLayout>
